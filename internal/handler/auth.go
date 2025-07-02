@@ -2,6 +2,7 @@ package handler
 
 import (
 	"api/catshelter/internal/handler/dto"
+	"api/catshelter/internal/middleware/heplers"
 	"api/catshelter/internal/repository"
 	"api/catshelter/internal/service"
 	"encoding/json"
@@ -17,6 +18,13 @@ type AuthHandler struct {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	_, ok := heplers.UserIdFromContext(r.Context())
+	if ok {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("You are already logged in"))
+		return
+	}
+
 	var req dto.RegisterUserRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -41,6 +49,12 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	_, ok := heplers.UserIdFromContext(r.Context())
+	if ok {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("You are already logged in"))
+		return
+	}
 	var req dto.LoginUserRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -84,10 +98,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) LogoutEverywhere(w http.ResponseWriter, r *http.Request) {
-
-	//TODO: Надо короче сделать так чтобы из middleware брали id пользователя
-
-	userId, ok := "awdawd", true
+	userId, ok := heplers.UserIdFromContext(r.Context())
 	if !ok {
 		http.Error(w, "User id not found", http.StatusBadRequest)
 		return
@@ -104,14 +115,6 @@ func (h *AuthHandler) LogoutEverywhere(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) UpdateSession(w http.ResponseWriter, r *http.Request) {
-	accessToken, err := r.Cookie("access_token")
-	if err == nil {
-		if accessToken.Expires.After(time.Now()) {
-			http.Error(w, "'access_token' is not expried", http.StatusBadRequest)
-			return
-		}
-	}
-
 	refreshToken, err := r.Cookie("refresh_token")
 	if err != nil {
 		http.Error(w, "'refresh_token' cookie not found", http.StatusBadRequest)
@@ -148,7 +151,7 @@ func (h *AuthHandler) clearAuthCookies(w http.ResponseWriter) {
 
 func (h *AuthHandler) setAuthCookies(w http.ResponseWriter, tokens *service.SessionTokens) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "access_token",
+		Name:     "jwt",
 		Value:    tokens.AccessToken.Token,
 		Expires:  tokens.AccessToken.ExpiresAt,
 		HttpOnly: true,
@@ -166,4 +169,8 @@ func (h *AuthHandler) setAuthCookies(w http.ResponseWriter, tokens *service.Sess
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})
+}
+
+func NewAuthHandler(authService service.AuthService, tokenService service.TokenService) *AuthHandler {
+	return &AuthHandler{authService: authService, tokenService: tokenService}
 }

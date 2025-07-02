@@ -2,6 +2,8 @@ package domain
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -9,10 +11,10 @@ import (
 
 type User struct {
 	BaseModel
-	Login    string
+	Login    string `gorm:"unique"`
 	Password string
 	Name     string
-	Role     *Role
+	Roles    []*Role `gorm:"many2many:user_roles;"`
 	Cats     []*Cat
 }
 
@@ -39,6 +41,30 @@ func NewUser(login, password, name string) (*User, error) {
 	}, nil
 }
 
-func (u *User) SetRole(role *Role) {
-	u.Role = role
+func (u *User) AddRole(role *Role) error {
+	_, ok := u.IsHaveRole(role)
+	if ok {
+		return fmt.Errorf("user already have role '%s'", role.Name)
+	}
+	u.Roles = append(u.Roles, role)
+	return nil
+}
+
+func (u *User) RemoveRole(role *Role) error {
+	index, ok := u.IsHaveRole(role)
+	if !ok {
+		return fmt.Errorf("user has no role '%s'", role.Name)
+	}
+	u.Roles[index] = u.Roles[len(u.Roles)-1]
+	u.Roles = u.Roles[:len(u.Roles)-1]
+	return nil
+}
+
+func (u *User) IsHaveRole(role *Role) (int, bool) {
+	for i, r := range u.Roles {
+		if strings.EqualFold(r.Name, role.Name) {
+			return i, true
+		}
+	}
+	return -1, false
 }

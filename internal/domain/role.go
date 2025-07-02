@@ -8,7 +8,7 @@ import (
 
 type Role struct {
 	BaseModel
-	Name string
+	Name string `gorm:"unique"`
 }
 
 func NewRole(name string) (*Role, error) {
