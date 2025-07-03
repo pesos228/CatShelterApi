@@ -1,8 +1,8 @@
 package handler
 
 import (
+	"api/catshelter/internal/custom_middleware/heplers"
 	"api/catshelter/internal/handler/dto"
-	"api/catshelter/internal/middleware/heplers"
 	"api/catshelter/internal/repository"
 	"api/catshelter/internal/service"
 	"encoding/json"

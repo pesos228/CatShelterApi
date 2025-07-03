@@ -1,9 +1,8 @@
 package handler
 
 import (
-	"api/catshelter/internal/domain"
+	"api/catshelter/internal/custom_middleware/heplers"
 	"api/catshelter/internal/handler/dto"
-	"api/catshelter/internal/middleware/heplers"
 	"api/catshelter/internal/repository"
 	"api/catshelter/internal/service"
 	"encoding/json"
@@ -49,23 +48,31 @@ func (h *UserHandler) AboutMe(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func mapRolesToRolesResponse(roles []string) []dto.RoleResponse {
-	roleResponses := make([]dto.RoleResponse, len(roles))
-	for i, role := range roles {
-		roleResponses[i] = dto.RoleResponse{Name: role}
+func (h *UserHandler) AdoptCat(w http.ResponseWriter, r *http.Request) {
+	var cat dto.ShelterCatRequest
+	err := json.NewDecoder(r.Body).Decode(&cat)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to decode JSON: %s", err.Error()), http.StatusBadRequest)
+		return
 	}
-	return roleResponses
-}
 
-func mapCatsToCatResponses(cats []*domain.Cat) []dto.CatResponse {
-	catResponses := make([]dto.CatResponse, len(cats))
-	for i, cat := range cats {
-		catResponses[i] = dto.CatResponse{
-			Name: cat.Name,
-			Age:  cat.Age,
-		}
+	userId, ok := heplers.UserIdFromContext(r.Context())
+	if !ok {
+		http.Error(w, "User id not found", http.StatusBadRequest)
+		return
 	}
-	return catResponses
+
+	err = h.userService.AdoptCat(r.Context(), cat.Id, userId)
+	if err != nil {
+		if errors.Is(err, repository.ErrCatNotFound) || errors.Is(err, repository.ErrUserNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write([]byte("Congratulations, you've adopted a cat"))
 }
 
 func NewUserHandler(userService service.UserService) *UserHandler {

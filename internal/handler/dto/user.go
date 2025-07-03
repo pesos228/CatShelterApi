@@ -7,3 +7,7 @@ type UserInfoResponse struct {
 	Roles []RoleResponse `json:"roles"`
 	Cats  []CatResponse  `json:"cats"`
 }
+
+type ShelterCatRequest struct {
+	Id string `json:"id"`
+}

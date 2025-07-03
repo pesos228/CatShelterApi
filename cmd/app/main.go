@@ -1,6 +1,7 @@
 package main
 
 import (
+	"api/catshelter/internal/custom_middleware"
 	"api/catshelter/internal/domain"
 	"api/catshelter/internal/handler"
 	"api/catshelter/internal/repository"
@@ -35,13 +36,16 @@ func main() {
 	roleRepository := repository.NewRoleRepositoryImpl(db)
 	userRepository := repository.NewUserReposioryImpl(db)
 	refreshTokenRepository := repository.NewRefreshTokenRepositoryImpl(db)
+	catRepository := repository.NewCatRepositoryImpl(db)
 
 	authService := service.NewAuthService(userRepository, roleRepository)
 	tokenService := service.NewTokenService(tokenAuth, refreshTokenRepository, userRepository)
-	userService := service.NewUserService(userRepository)
+	userService := service.NewUserService(userRepository, catRepository)
+	catService := service.NewCatService(catRepository)
 
 	authHandler := handler.NewAuthHandler(authService, tokenService)
 	userHandler := handler.NewUserHandler(userService)
+	catHandler := handler.NewCatHandler(&catService)
 
 	err = initRoles(context.Background(), roleRepository)
 	if err != nil {
@@ -56,10 +60,13 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(jwtauth.Verifier(tokenAuth))
 
-		r.Get("/user/info", userHandler.AboutMe)
+		r.Get("/api/user/info", userHandler.AboutMe)
+
 		r.Post("/api/auth/login", authHandler.Login)
 		r.Post("/api/auth/register", authHandler.Register)
 		r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/api/update-session", authHandler.UpdateSession)
+
+		r.Get("/api/cats", catHandler.LonelyCats)
 	})
 
 	r.Group(func(r chi.Router) {
@@ -67,6 +74,15 @@ func main() {
 		r.Use(jwtauth.Authenticator(tokenAuth))
 
 		r.Post("/api/auth/logout", authHandler.Logout)
+		r.Post("/api/user/adopt-cat", userHandler.AdoptCat)
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(jwtauth.Verifier(tokenAuth))
+		r.Use(jwtauth.Authenticator(tokenAuth))
+		r.Use(custom_middleware.RoleRequired("admin"))
+
+		r.Post("/api/cats", catHandler.AddCat)
 	})
 
 	log.Printf("The server starts on port %s\n", cfg.HTTPport)
