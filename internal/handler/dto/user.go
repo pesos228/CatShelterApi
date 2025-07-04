@@ -8,6 +8,10 @@ type UserInfoResponse struct {
 	Cats  []CatResponse  `json:"cats"`
 }
 
-type ShelterCatRequest struct {
+type AdoptCatRequest struct {
 	Id string `json:"id"`
+}
+
+type AddRoleRequest struct {
+	Name string `json:"name"`
 }

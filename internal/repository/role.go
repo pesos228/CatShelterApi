@@ -25,7 +25,7 @@ func (r *roleRepositoryImpl) Save(ctx context.Context, role *domain.Role) error 
 
 func (r *roleRepositoryImpl) FindByName(ctx context.Context, name string) (*domain.Role, error) {
 	var role domain.Role
-	result := r.db.WithContext(ctx).First(&role, "name = ?", name)
+	result := r.db.WithContext(ctx).First(&role, "LOWER(name) = LOWER(?)", name)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrRoleNotFound

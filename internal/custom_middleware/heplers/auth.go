@@ -6,10 +6,6 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 )
 
-type contextString string
-
-const userIdKey = contextString("user_id")
-
 func UserIdFromContext(ctx context.Context) (string, bool) {
 	userId, ok := loadValueFromClaims(ctx, "user_id")
 	if !ok {

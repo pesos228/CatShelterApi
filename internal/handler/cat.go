@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 type CatHandler struct {
@@ -15,13 +16,31 @@ type CatHandler struct {
 }
 
 func (c *CatHandler) LonelyCats(w http.ResponseWriter, r *http.Request) {
-	cats, err := c.catService.FindLonelyCats(r.Context())
+	pageStr := r.URL.Query().Get("page")
+	pageSizeStr := r.URL.Query().Get("page_size")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page <= 0 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize <= 0 {
+		pageSize = 10
+	}
+
+	cats, paginationInfo, err := c.catService.FindLonelyCats(r.Context(), page, pageSize)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("DB error: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
+
+	response := &dto.CatsPaginatedResponse{
+		Data:       mapCatsToCatResponses(cats),
+		Pagination: *paginationInfo,
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(mapCatsToCatResponses(cats))
+	json.NewEncoder(w).Encode(response)
 }
 
 func (c *CatHandler) AddCat(w http.ResponseWriter, r *http.Request) {

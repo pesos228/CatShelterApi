@@ -2,13 +2,14 @@ package service
 
 import (
 	"api/catshelter/internal/domain"
+	"api/catshelter/internal/handler/dto"
 	"api/catshelter/internal/repository"
 	"context"
 	"fmt"
 )
 
 type CatService interface {
-	FindLonelyCats(ctx context.Context) ([]*domain.Cat, error)
+	FindLonelyCats(ctx context.Context, page, pageSize int) ([]*domain.Cat, *dto.PaginationResult, error)
 	AddCat(ctx context.Context, name string, age int) error
 }
 
@@ -29,12 +30,14 @@ func (c *catServiceImpl) AddCat(ctx context.Context, name string, age int) error
 	return nil
 }
 
-func (c *catServiceImpl) FindLonelyCats(ctx context.Context) ([]*domain.Cat, error) {
-	lonelyCats, err := c.catRepository.FindWithoutUserId(ctx)
+func (c *catServiceImpl) FindLonelyCats(ctx context.Context, page, pageSize int) ([]*domain.Cat, *dto.PaginationResult, error) {
+	lonelyCats, count, err := c.catRepository.FindWithoutUserId(ctx, page, pageSize)
 	if err != nil {
-		return nil, fmt.Errorf("DB error: %s", err.Error())
+		return nil, nil, fmt.Errorf("DB error: %s", err.Error())
 	}
-	return lonelyCats, nil
+
+	paginationResult := repository.CalculatePaginationResult(page, pageSize, count)
+	return lonelyCats, &paginationResult, nil
 }
 
 func NewCatService(catRepository repository.CatRepository) CatService {

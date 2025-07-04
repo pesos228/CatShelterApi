@@ -40,7 +40,7 @@ func main() {
 
 	authService := service.NewAuthService(userRepository, roleRepository)
 	tokenService := service.NewTokenService(tokenAuth, refreshTokenRepository, userRepository)
-	userService := service.NewUserService(userRepository, catRepository)
+	userService := service.NewUserService(userRepository, catRepository, roleRepository)
 	catService := service.NewCatService(catRepository)
 
 	authHandler := handler.NewAuthHandler(authService, tokenService)
@@ -83,6 +83,9 @@ func main() {
 		r.Use(custom_middleware.RoleRequired("admin"))
 
 		r.Post("/api/cats", catHandler.AddCat)
+		r.Get("/api/user/info/{id}", userHandler.AboutUser)
+		r.Post("/api/user/{id}/remove-role", userHandler.RemoveRole)
+		r.Post("/api/user/{id}/add-role", userHandler.AddRole)
 	})
 
 	log.Printf("The server starts on port %s\n", cfg.HTTPport)

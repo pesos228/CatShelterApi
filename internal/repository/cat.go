@@ -11,7 +11,7 @@ import (
 type CatRepository interface {
 	Save(ctx context.Context, cat *domain.Cat) error
 	FindById(ctx context.Context, id string) (*domain.Cat, error)
-	FindWithoutUserId(ctx context.Context) ([]*domain.Cat, error)
+	FindWithoutUserId(ctx context.Context, page, pageSize int) ([]*domain.Cat, int64, error)
 	FindAll(ctx context.Context) ([]*domain.Cat, error)
 }
 
@@ -21,13 +21,21 @@ type catRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func (c *catRepositoryImpl) FindWithoutUserId(ctx context.Context) ([]*domain.Cat, error) {
+func (c *catRepositoryImpl) FindWithoutUserId(ctx context.Context, page, pageSize int) ([]*domain.Cat, int64, error) {
 	var cats []*domain.Cat
-	result := c.db.WithContext(ctx).Where("user_id IS NULL").Find(&cats)
-	if result.Error != nil {
-		return nil, result.Error
+	var count int64
+
+	baseQuery := c.db.WithContext(ctx).Model(&domain.Cat{}).Where("user_id IS NULL")
+
+	if err := baseQuery.Count(&count).Error; err != nil {
+		return nil, 0, err
 	}
-	return cats, result.Error
+
+	if err := baseQuery.Scopes(PaginationWithParams(page, pageSize)).Find(&cats).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return cats, count, nil
 }
 
 func (c *catRepositoryImpl) FindAll(ctx context.Context) ([]*domain.Cat, error) {

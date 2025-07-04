@@ -24,3 +24,13 @@ func mapCatsToCatResponses(cats []*domain.Cat) []dto.CatResponse {
 	}
 	return catResponses
 }
+
+func mapUserToUserInfoResponse(user *domain.User, roles []string) *dto.UserInfoResponse {
+	return &dto.UserInfoResponse{
+		Id:    user.Id,
+		Name:  user.Name,
+		Login: user.Login,
+		Roles: mapRolesToRolesResponse(roles),
+		Cats:  mapCatsToCatResponses(user.Cats),
+	}
+}
