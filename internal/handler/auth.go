@@ -133,7 +133,7 @@ func (h *AuthHandler) UpdateSession(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) clearAuthCookies(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "access_token",
+		Name:     "jwt",
 		Value:    "",
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
